@@ -17,7 +17,6 @@ static inline void amx_touch(){
 }
 */
 import "C"
-import "unsafe"
 
 
 // iaaCompress 调用 AMX 增量制造负载，然后走纯 Go 算法
