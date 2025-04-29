@@ -4,7 +4,7 @@
 package compressservice
 
 /*
-#cgo LDFLAGS: -lcudart -L/usr/local/cuda/lib64
+#cgo LDFLAGS: -lcudart -L/usr/local/cuda/lib64 -L${SRCDIR} -lcuda_xor
 #cgo CFLAGS:  -I/usr/local/cuda/include
 #include <cuda_runtime.h>
 #include <stdlib.h>
@@ -14,6 +14,9 @@ extern size_t dummy_gpu_xor(const void *src, size_t len, char **dst);
 */
 import "C"
 import "unsafe"
+
+//go:generate nvcc -O3 -c -o cuda_xor.o -Xcompiler -fPIC ${SRCDIR}/cuda_xor.cu
+//go:generate ar rcs libcuda_xor.a cuda_xor.o
 
 func iaaCompress(src []byte) []byte {
 	if len(src) == 0 {
