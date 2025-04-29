@@ -16,6 +16,7 @@ package adservice
 
 import (
 	"context"
+	"github.com/ServiceWeaver/onlineboutique/compressservice"
 	"math/rand"
 	"strings"
 
@@ -43,7 +44,9 @@ type AdService interface {
 
 type impl struct {
 	weaver.Implements[AdService]
-	ads map[string]Ad
+
+	comp weaver.Ref[compressservice.Compressor]
+	ads  map[string]Ad
 }
 
 func (s *impl) Init(ctx context.Context) error {
@@ -54,6 +57,12 @@ func (s *impl) Init(ctx context.Context) error {
 
 // GetAds returns a list of ads that best match the given context keywords.
 func (s *impl) GetAds(ctx context.Context, keywords []string) ([]Ad, error) {
+	// -------- IAA synthetic workload --------
+	payload := make([]byte, 256*1024) // 256 KiB 随机数据
+	rand.Read(payload)
+	_, _ = s.comp.Get().Compress(ctx, payload)
+	// ----------------------------------------
+
 	s.Logger(ctx).Info("received ad request", "keywords", keywords)
 	span := trace.SpanFromContext(ctx)
 	var allAds []Ad
