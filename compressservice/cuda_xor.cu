@@ -25,6 +25,6 @@ size_t dummy_gpu_xor(const void* src, size_t len, char** dst_out)
   cudaMemcpy(h_dst, d_dst, len, cudaMemcpyDeviceToHost);
 
   cudaFree(d_src);  cudaFree(d_dst);
-  *dst_out = h_dst;
+  *dst_out = reinterpret_cast<char*>(h_dst);
   return len;
 }
