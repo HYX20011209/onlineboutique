@@ -15,7 +15,7 @@ extern size_t dummy_gpu_xor(const void *src, size_t len, char **dst);
 import "C"
 import "unsafe"
 
-//go:generate nvcc -O3 -c -o cuda_xor.o -Xcompiler -fPIC $SRCDIR/cuda_xor.cu
+//go:generate nvcc -O3 -c ./cuda_xor.cu -o cuda_xor.o -Xcompiler -fPIC
 //go:generate ar rcs libcuda_xor.a cuda_xor.o
 
 func iaaCompress(src []byte) []byte {
