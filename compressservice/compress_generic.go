@@ -1,5 +1,5 @@
-//go:build !avx2
-// +build !avx2
+//go:build !avx2 && !cuda && !amx
+// +build !avx2,!cuda,!amx
 
 package compressservice
 
