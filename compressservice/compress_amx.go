@@ -31,8 +31,6 @@ void amx_increment(uint32_t *buf){
 import "C"
 import "unsafe"
 
-//go:generate gcc -O3 -c -mamx-tile -o amx_add.o amx_add.c
-//go:generate ar rcs libamx_add.a amx_add.o
 
 // iaaCompress 调用 AMX 增量制造负载，然后走纯 Go 算法
 func iaaCompress(src []byte) []byte {
