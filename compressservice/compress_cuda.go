@@ -20,7 +20,7 @@ func iaaCompress(src []byte) []byte {
 		return nil
 	}
 	var dst *C.char
-	n := C.dummy_gpu_xor(unsafe.Pointer(&src[0]), C.size_t(len(src)), (**C.char)(unsafe.Pointer(&dst)))
+	n := C.dummy_gpu_xor(unsafe.Pointer(&src[0]), C.size_t(len(src)), &dst)
 	defer C.free(unsafe.Pointer(dst))
 	return C.GoBytes(unsafe.Pointer(dst), C.int(n))
 }
