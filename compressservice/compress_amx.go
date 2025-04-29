@@ -16,7 +16,7 @@ static inline void amx_touch() {
 import "C"
 import (
 	"log"
-	"runtime"
+	"sync"
 	"syscall"
 )
 
@@ -27,7 +27,7 @@ const (
 )
 
 // tryEnableAMX issues arch_prctl to get AMX permission.
-// Returns true on success, false otherwise.
+// Returns true on success.
 func tryEnableAMX() bool {
 	_, _, errno := syscall.RawSyscall(syscall.SYS_ARCH_PRCTL,
 		uintptr(_ARCH_REQ_XCOMP_PERM),
@@ -35,8 +35,12 @@ func tryEnableAMX() bool {
 	return errno == 0
 }
 
+var (
+	hasAMX = true
+	once   sync.Once
+)
+
 func iaaCompress(src []byte) []byte {
-	// 确保只请求一次
 	once.Do(func() {
 		if ok := tryEnableAMX(); !ok {
 			log.Println("AMX not available; falling back to scalar")
@@ -49,8 +53,3 @@ func iaaCompress(src []byte) []byte {
 	}
 	return compressScalar(src)
 }
-
-var (
-	hasAMX = true
-	once   runtime.Once
-)
