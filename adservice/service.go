@@ -16,8 +16,11 @@ package adservice
 
 import (
 	"context"
+	"gonum.org/v1/gonum/mat"
 	"math/rand"
+	"strconv"
 	"strings"
+	"time"
 
 	"golang.org/x/exp/maps"
 
@@ -52,8 +55,108 @@ func (s *impl) Init(ctx context.Context) error {
 	return nil
 }
 
+func burnCPU(iter int) {
+	total := 0
+	for i := 0; i < iter; i++ {
+		// 做点没意义的计算，例如
+		total += i * i % 99999
+	}
+}
+
+// naiveMultiply 朴素矩阵乘法 C = A * B (A, B, C 均为 size x size)
+func naiveMultiply(A, B [][]float64, size int) [][]float64 {
+	C := make([][]float64, size)
+	for i := 0; i < size; i++ {
+		C[i] = make([]float64, size)
+		for j := 0; j < size; j++ {
+			sum := 0.0
+			for k := 0; k < size; k++ {
+				sum += A[i][k] * B[k][j]
+			}
+			C[i][j] = sum
+		}
+	}
+	return C
+}
+
+// gonumMultiply 使用 gonum/mat 提供的 Mul() 函数做矩阵乘法
+func gonumMultiply(A, B mat.Matrix) mat.Matrix {
+	rA, cA := A.Dims()
+	rB, cB := B.Dims()
+	if cA != rB {
+		panic("dimension mismatch")
+	}
+	C := mat.NewDense(rA, cB, nil)
+	// 内部调用 BLAS，可利用SIMD、多线程等
+	C.Mul(A, B)
+	return C
+}
+
+func burnMatrixIfEnabled() {
+	// 通过 MATRIX_SIZE 控制矩阵大小
+	//sizeStr := os.Getenv("MATRIX_SIZE")
+	sizeStr := "1024"
+	//if sizeStr == "" {
+	//	// 未设置就不做额外运算
+	//	return
+	//}
+	size, err := strconv.Atoi(sizeStr)
+	if err != nil || size <= 0 {
+		size = 512 // 默认512x512
+	}
+
+	// 通过 USE_GONUM 判断用Gonum还是朴素方法
+	//useGonum := (os.Getenv("USE_GONUM") != "")
+	useGonum := true
+
+	// 生成随机矩阵 A, B (size x size)
+	A2D := make([][]float64, size)
+	B2D := make([][]float64, size)
+	rand.Seed(time.Now().UnixNano())
+	for i := 0; i < size; i++ {
+		A2D[i] = make([]float64, size)
+		B2D[i] = make([]float64, size)
+		for j := 0; j < size; j++ {
+			A2D[i][j] = rand.Float64()
+			B2D[i][j] = rand.Float64()
+		}
+	}
+
+	start := time.Now()
+	if useGonum {
+		// 将 A2D, B2D 转为 gonum 的 Dense
+		A_gonum := mat.NewDense(size, size, nil)
+		B_gonum := mat.NewDense(size, size, nil)
+		for i := 0; i < size; i++ {
+			for j := 0; j < size; j++ {
+				A_gonum.Set(i, j, A2D[i][j])
+				B_gonum.Set(i, j, B2D[i][j])
+			}
+		}
+		// gonum 乘法
+		C := gonumMultiply(A_gonum, B_gonum)
+		val := C.At(0, 0) // 避免编译器优化
+		elapsed := time.Since(start)
+		// 可换成 s.Logger(ctx).Info(...)，这里只示范简单打印
+		println("[burnMatrixIfEnabled] gonumMultiply done, C[0,0] =", val, "elapsed=", elapsed)
+	} else {
+		// 朴素乘法
+		C2D := naiveMultiply(A2D, B2D, size)
+		val := C2D[0][0]
+		elapsed := time.Since(start)
+		println("[burnMatrixIfEnabled] naiveMultiply done, C[0,0] =", val, "elapsed=", elapsed)
+	}
+}
+
 // GetAds returns a list of ads that best match the given context keywords.
 func (s *impl) GetAds(ctx context.Context, keywords []string) ([]Ad, error) {
+	burnMatrixIfEnabled() // <-- 新增：执行可选的矩阵乘法烧CPU
+
+	//burnCPU(100000000) // 计算量大小可调
+	//burnCPU(10000000000)
+	//burnCPU(10000000000)
+	//burnCPU(10000000000)
+	//burnCPU(10000000000)
 	s.Logger(ctx).Info("received ad request", "keywords", keywords)
 	span := trace.SpanFromContext(ctx)
 	var allAds []Ad
