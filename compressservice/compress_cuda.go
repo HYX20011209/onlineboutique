@@ -10,7 +10,7 @@ package compressservice
 #include <stdlib.h>
 
 // kernel 原型声明
-extern size_t dummy_gpu_xor(const void *src, size_t len, void **dst);
+extern size_t dummy_gpu_xor(const void *src, size_t len, char **dst);
 */
 import "C"
 import "unsafe"
