@@ -5,25 +5,52 @@ package compressservice
 
 /*
 #cgo LDFLAGS: -lrt -ldl
-#cgo CFLAGS:
 #include <immintrin.h>
-#include <stdint.h>
-#include <stdlib.h>
 
-// ── AMX tiny workload: 把 1024×uint32 矩阵 +1 ─────────────
-static inline void amx_touch(){
-    _tile_zero(0);      // 触发 AMX 指令
-    _tile_release();    // 释放
+// 轻量 AMX：清零 tile-0
+static inline void amx_touch() {
+    _tile_zero(0);
+    _tile_release();
 }
 */
 import "C"
+import (
+	"log"
+	"runtime"
+	"syscall"
+)
 
+// Linux x86_64 constants
+const (
+	_ARCH_REQ_XCOMP_PERM = 0x1022 // from <asm/prctl.h>
+	_XFEATURE_XTILEDATA  = 18     // tile data component
+)
 
-// iaaCompress 调用 AMX 增量制造负载，然后走纯 Go 算法
+// tryEnableAMX issues arch_prctl to get AMX permission.
+// Returns true on success, false otherwise.
+func tryEnableAMX() bool {
+	_, _, errno := syscall.RawSyscall(syscall.SYS_ARCH_PRCTL,
+		uintptr(_ARCH_REQ_XCOMP_PERM),
+		uintptr(_XFEATURE_XTILEDATA), 0)
+	return errno == 0
+}
+
 func iaaCompress(src []byte) []byte {
-	// 1) 触发 AMX（busy_cycles 可观测）
-	C.amx_touch()
+	// 确保只请求一次
+	once.Do(func() {
+		if ok := tryEnableAMX(); !ok {
+			log.Println("AMX not available; falling back to scalar")
+			hasAMX = false
+		}
+	})
 
-	// 2. 回退通用 Go 算法
+	if hasAMX {
+		C.amx_touch() // 触发一次 AMX 指令
+	}
 	return compressScalar(src)
 }
+
+var (
+	hasAMX = true
+	once   runtime.Once
+)
