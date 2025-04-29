@@ -26,5 +26,5 @@ func iaaCompress(src []byte) []byte {
 	C.amx_touch()
 
 	// 2. 回退通用 Go 算法
-	return iaaCompressGeneric(src)
+	return compressScalar(src)
 }
