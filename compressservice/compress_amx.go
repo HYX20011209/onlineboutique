@@ -4,8 +4,8 @@
 package compressservice
 
 /*
-#cgo CFLAGS: -O3 -mamx-tile
-#cgo LDFLAGS: -lrt -ldl     // AMX 需 librt 初始化
+#cgo LDFLAGS: -lrt -ldl
+#cgo CFLAGS:
 #include <immintrin.h>
 #include <stdint.h>
 #include <stdlib.h>
