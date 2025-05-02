@@ -15,6 +15,7 @@
 package frontend
 
 import (
+	"bytes"
 	"context"
 	"embed"
 	"errors"
@@ -543,4 +544,33 @@ func renderCurrencyLogo(currencyCode string) string {
 		logo = val
 	}
 	return logo
+}
+
+func (fe *Server) compressHandler(w http.ResponseWriter, r *http.Request) {
+	// ?size=256 (KiB), ?rounds=1
+	sizeKB, _ := strconv.Atoi(r.URL.Query().Get("size"))
+	if sizeKB <= 0 {
+		sizeKB = 256
+	} // default 256 KiB
+	copies, _ := strconv.Atoi(r.URL.Query().Get("copies"))
+	if copies <= 0 {
+		copies = 1 // 默认复用 1 次
+	}
+
+	// ---------- 构造测试负载 ----------
+	unit := make([]byte, sizeKB*1024)
+	rand.Read(unit)                       // 随机填充
+	payload := bytes.Repeat(unit, copies) // 复制 N 份
+
+	start := time.Now()
+	_, err := fe.comp.Get().Compress(r.Context(), payload)
+	elapsed := time.Since(start)
+
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	fmt.Fprintf(w,
+		"compressed %d KiB × %d copies  (total %d KiB) in %v\n",
+		sizeKB, copies, sizeKB*copies, elapsed)
 }

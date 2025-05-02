@@ -18,6 +18,7 @@ import (
 	"context"
 	"embed"
 	"fmt"
+	"github.com/ServiceWeaver/onlineboutique/compressservice"
 	"io/fs"
 	"net"
 	"net/http"
@@ -80,6 +81,8 @@ type Server struct {
 	checkoutService       weaver.Ref[checkoutservice.CheckoutService]
 	shippingService       weaver.Ref[shippingservice.ShippingService]
 	adService             weaver.Ref[adservice.AdService]
+
+	comp weaver.Ref[compressservice.Compressor]
 
 	boutique weaver.Listener
 }
@@ -146,6 +149,8 @@ func Serve(ctx context.Context, s *Server) error {
 	r.Handle("/static/", weaver.InstrumentHandler("static", http.StripPrefix("/static/", http.FileServer(http.FS(staticHTML)))))
 	r.Handle("/robots.txt", instrument("robots", func(w http.ResponseWriter, _ *http.Request) { fmt.Fprint(w, "User-agent: *\nDisallow: /") }, nil))
 	r.HandleFunc(weaver.HealthzURL, weaver.HealthzHandler)
+
+	r.Handle("/compress", instrument("compress", s.compressHandler, []string{get}))
 
 	// Set handler.
 	var handler http.Handler = r
